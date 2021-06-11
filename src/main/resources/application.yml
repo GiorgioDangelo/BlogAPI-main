@@ -1,0 +1,19 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/blog
+    username: root
+    password: Giovanotto.1
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    show-sql: true
+    format-sql: true
+
+jwt:
+  token:
+    type: Bearer
+  header: Authorization
+  secret: password01
+  expiration: 7200
