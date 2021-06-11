@@ -178,7 +178,7 @@ public class ArticoloApiController {
 		// lo stato ad 1 e torna il codice 204
 		Articolo articolo_selezionato = articolodao.trovaArticoloUtenteBozza(username, 0, id_articolo);
 		// significa che c'è un utente loggato,esiste quell'id ma l'utente non è il
-		// proprietario di quell'articolo
+		// proprietario di quell'articolo 403
 		if (articolo_selezionato == null) {
 			return new ResponseEntity<>(HttpStatus.FORBIDDEN);
 		} // In questo caso significa che l'id corrisponde ad un articolo e questo
@@ -189,5 +189,35 @@ public class ArticoloApiController {
 			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 		}
 	}
+	
+	@RequestMapping(value = "/api/articolo/{id_articolo}", method = RequestMethod.DELETE)
+	public ResponseEntity<?> eliminaArticolo(@RequestBody ArticoloDTO articolo, @PathVariable Long id_articolo,
+			@RequestHeader(name = "Authorization", required = false) String token) throws Exception {
+		String username = null;
+		if (token != null && token.startsWith("Bearer")) {
+			token = token.replaceAll("Bearer ", "");
+			username = jwtUtil.getUsernameFromToken(token);
+		}
+		// se l'utente non è loggato invia l'errore 401
+		if (username == null) {
+		return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);}
+		
+		Articolo check_articolo = articolodao.trovaID(id_articolo);
+		// se l'articolo con questo id non esiste lancia l'errore 404 not found
+		if (check_articolo == null) {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+		
+		Articolo utente_associato_all_articolo=articolodao.articoloUtente(username, id_articolo);
+		//se è null significa che l'utente non corrisponde all'id quindi non è autorizzato 403
+		if(utente_associato_all_articolo==null) {
+			return new ResponseEntity<>(HttpStatus.FORBIDDEN);
 			
+		}
+		//se invece esiste l'utente associato all'articolo esiste allora elimino l'articolo 204
+		else {	
+			articolodao.delete(utente_associato_all_articolo);
+			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		}			
+}
 }
