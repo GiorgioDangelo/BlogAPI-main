@@ -46,6 +46,21 @@ public class ArticoloUserDetailsService {
 		return articoloDao.save(newArticolo);
 	}
 	
+	public Articolo update(ArticoloDTO articolo,User utente_corrente,Articolo articolo_selezionato) {
+		Articolo newArticolo = new Articolo();
+		Date date = new Date();
+		newArticolo.setId(articolo_selezionato.getId());
+		newArticolo.setTesto(articolo.getTesto());
+		newArticolo.setTitolo(articolo.getTitolo());
+		newArticolo.setCategoria(articolo.getCategoria());
+		newArticolo.setSottotitolo(articolo.getSottotitolo());
+		newArticolo.setStato(1);
+		newArticolo.setData_di_pubblicazione(articolo_selezionato.getData_di_pubblicazione());
+		newArticolo.setData_ultima_modifica(date);
+		newArticolo.setStruttura_user(utente_corrente);
+		return articoloDao.save(newArticolo);
+	}
+	
 	public List<String> getAllCategorie() {
 		List<Articolo> tutto=(List<Articolo>) articoloDao.findAll();
 		List<String> nomi_categorie=new ArrayList<String>();

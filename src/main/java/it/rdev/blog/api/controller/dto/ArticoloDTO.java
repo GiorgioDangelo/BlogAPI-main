@@ -10,7 +10,15 @@ public class ArticoloDTO {
 	private String titolo;
 	private String sottotitolo;
 	private User utente;
+	private Integer id;
+	
 
+	public Integer getId() {
+		return id;
+	}
+	public void setId(Integer id) {
+		this.id = id;
+	}
 	public User getUtente() {
 		return utente;
 	}

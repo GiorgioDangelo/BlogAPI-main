@@ -35,36 +35,36 @@ public class ArticoloApiController {
 	private UserDao userdao;
 	@Autowired
 	private ArticoloDao articolodao;
-	
+
 	@Autowired
 	ArticoloUserDetailsService articoloservice;
-	
+
 	@RequestMapping(value = "/api/categoria", method = RequestMethod.GET)
 	public ResponseEntity<?> getArticoli() throws Exception {
 		List<String> nomi_categorie;
-		nomi_categorie=articoloservice.getAllCategorie();
-		//Qui gestire la risposta
-		if(nomi_categorie!=null) {
-		return ResponseEntity.ok(nomi_categorie);}
-		else {
+		nomi_categorie = articoloservice.getAllCategorie();
+		// Qui gestire la risposta
+		if (nomi_categorie != null) {
+			return ResponseEntity.ok(nomi_categorie);
+		} else {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
 	}
 
-	
-	//Inserimento nel database
+	// Inserimento nel database
 	@RequestMapping(value = "/api/articolo", method = RequestMethod.POST)
-	public ResponseEntity<?> saveArticoloBozza(@RequestBody ArticoloDTO articolo,@RequestHeader(name = "Authorization") String token) throws Exception {
+	public ResponseEntity<?> saveArticoloBozza(@RequestBody ArticoloDTO articolo,
+			@RequestHeader(name = "Authorization") String token) throws Exception {
 		String username = null;
-		if(token != null && token.startsWith("Bearer")) {
+		if (token != null && token.startsWith("Bearer")) {
 			token = token.replaceAll("Bearer ", "");
 			username = jwtUtil.getUsernameFromToken(token);
 		}
-		User utente=userdao.findByUsername(username);
-		return ResponseEntity.ok(articoloservice.save(articolo,utente));
+		User utente = userdao.findByUsername(username);
+		return ResponseEntity.ok(articoloservice.save(articolo, utente));
 	}
-	
-	//Ricerca dell'api tramite l'id con il metodo get
+
+	// Ricerca dell'api tramite l'id con il metodo get
 	@RequestMapping(value = "/api/articolo/{id_articolo}", method = RequestMethod.GET)
 	public ResponseEntity<?> recupero_di_un_singolo_articolo(@PathVariable Long id_articolo,
 			@RequestHeader(name = "Authorization", required = false) String token) throws Exception {
@@ -73,6 +73,7 @@ public class ArticoloApiController {
 			token = token.replaceAll("Bearer ", "");
 			username = jwtUtil.getUsernameFromToken(token);
 		}
+		System.out.println(username);
 
 		Articolo controllo_articolo = articolodao.trovaID(id_articolo);
 
@@ -93,54 +94,100 @@ public class ArticoloApiController {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
 	}
-	
-	//Ricerca articoli
+
+	// Ricerca articoli
 	@RequestMapping(value = "/api/articolo", method = RequestMethod.GET)
-	public ResponseEntity<?> ricercaArticoli(@RequestHeader(name = "Authorization", required = false) String token) throws Exception {
+	public ResponseEntity<?> ricercaArticoli(@RequestHeader(name = "Authorization", required = false) String token)
+			throws Exception {
 		String username = null;
 		if (token != null && token.startsWith("Bearer")) {
 			token = token.replaceAll("Bearer ", "");
 			username = jwtUtil.getUsernameFromToken(token);
 		}
-		//Se non c'è nessun utente loggato restituisci solo gli articoli con stato Pubblicato ossia 1 mentre 0 corrisponde alla bozza
-		List <Articolo> articoli_pubblicati=articolodao.trovaArticoliPubblicati(1);	
-		List <Articolo> articoli_bozza;
-		//se l'utente non è loggato ed esistono articoli pubblicati falli vedere al client restituendo lo stato 200
-		if(username==null && articoli_pubblicati!=null) {
+		// Se non c'è nessun utente loggato restituisci solo gli articoli con stato
+		// Pubblicato ossia 1 mentre 0 corrisponde alla bozza
+		List<Articolo> articoli_pubblicati = articolodao.trovaArticoliPubblicati(1);
+		List<Articolo> articoli_bozza;
+
+		// se l'utente non è loggato ed esistono articoli pubblicati falli vedere al
+		// client restituendo lo stato 200
+		if (username == null && articoli_pubblicati != null) {
 			return ResponseEntity.ok(articoli_pubblicati);
 		}
-		//se invece l'utente è loggato oltre a restituire tutti gli articoli pubblicati può vedere anche i suoi articoli in stato Bozza
-		//se presenti
-		if (username!=null) {
-			//Con questa query vado a selezionare l'utente corrente che ha articoli nello stato Bozza 
-			articoli_bozza=articolodao.trovaArticoliBozzaUtente(username,0);
-			//Praticamente qui faccio un controllo e vedo se sia articoli_bozza che pubblicati sono valorizzati ,se è cosi praticamente
-			//inserisco in una lista i valori dell'altro in questo modo da ritornare un'unica lista al client avente i valori degli articoli
-			//pubblicati + gli articoli bozza dell'utente
-			if(articoli_bozza!=null && articoli_pubblicati!=null) {
-				for (int i=0;i<articoli_bozza.size();i++) {
+		// se invece l'utente è loggato oltre a restituire tutti gli articoli pubblicati
+		// può vedere anche i suoi articoli in stato Bozza
+		// se presenti
+		if (username != null) {
+			// Con questa query vado a selezionare l'utente corrente che ha articoli nello
+			// stato Bozza
+			articoli_bozza = articolodao.trovaArticoliBozzaUtente(username, 0);
+			// Praticamente qui faccio un controllo e vedo se sia articoli_bozza che
+			// pubblicati sono valorizzati ,se è cosi praticamente
+			// inserisco in una lista i valori dell'altro in questo modo da ritornare
+			// un'unica lista al client avente i valori degli articoli
+			// pubblicati + gli articoli bozza dell'utente
+			if (articoli_bozza != null && articoli_pubblicati != null) {
+				for (int i = 0; i < articoli_bozza.size(); i++) {
 					articoli_pubblicati.add(articoli_bozza.get(i));
 				}
 				return ResponseEntity.ok(articoli_pubblicati);
 			}
-			//Se una delle due liste non è valorizzata può significare 2 cose:
-			//1) l'utente corrente non ha articoli bozza quindi restituisco al client solo gli articoli con stato Pubblicato (1)
-			//2)Può essere che non esistono articoli pubblicati ma che l'utente ha scritto degli articoli con Stato Bozza quindi
-			//Praticamente l'utente visualizzerà solo i suoi articoli in quanto non sono presenti articoli pubblicati
-			if(articoli_bozza==null) {
+			// Se una delle due liste non è valorizzata può significare 2 cose:
+			// 1) l'utente corrente non ha articoli bozza quindi restituisco al client solo
+			// gli articoli con stato Pubblicato (1)
+			// 2)Può essere che non esistono articoli pubblicati ma che l'utente ha scritto
+			// degli articoli con Stato Bozza quindi
+			// Praticamente l'utente visualizzerà solo i suoi articoli in quanto non sono
+			// presenti articoli pubblicati
+			if (articoli_bozza == null) {
 				return ResponseEntity.ok(articoli_pubblicati);
-			}
-			else {
+			} else {
 				return ResponseEntity.ok(articoli_bozza);
 			}
 		}
-		// se arrivo a questo punto significa che non è loggato nessun utente e non ci sono articoli pubblicati e restituisce l'errore 404
+		// se arrivo a questo punto significa che non è loggato nessun utente e non ci
+		// sono articoli pubblicati e restituisce l'errore 404
 		else {
-			return new ResponseEntity<>(HttpStatus.NOT_FOUND); 
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
-		
-		
 	}
-	
-	
+
+	@RequestMapping(value = "/api/articolo/{id_articolo}", method = RequestMethod.PUT)
+	public ResponseEntity<?> modificaArticoli(@RequestBody ArticoloDTO articolo, @PathVariable Long id_articolo,
+			@RequestHeader(name = "Authorization", required = false) String token) throws Exception {
+		String username = null;
+		if (token != null && token.startsWith("Bearer")) {
+			token = token.replaceAll("Bearer ", "");
+			username = jwtUtil.getUsernameFromToken(token);
+		}
+		// se l'utente non è loggato invia l'errore 401
+		if (username == null) {
+			return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+		}
+		User utente = userdao.findByUsername(username);
+		Articolo check_articolo = articolodao.trovaID(id_articolo);
+		// se l'articolo con questo id non esiste lancia l'errore 404 not found
+		if (check_articolo == null) {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+
+		// Controllo all'inzio se l'utente è loggato ,poi vedo se l'id passato nell'api
+		// corrisponde ad un suo articolo che si trova
+		// nello stato di Bozza se è vero ,vado a fare l'update dell'articolo e
+		// aggiornato lo stato con Pubblicato quindi aggiornado
+		// lo stato ad 1 e torna il codice 204
+		Articolo articolo_selezionato = articolodao.trovaArticoloUtenteBozza(username, 0, id_articolo);
+		// significa che c'è un utente loggato,esiste quell'id ma l'utente non è il
+		// proprietario di quell'articolo
+		if (articolo_selezionato == null) {
+			return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+		} // In questo caso significa che l'id corrisponde ad un articolo e questo
+			// articolo corrisponde all'utente loggato e il suo stato è 0
+			// cioè è un bozza quindi avviene l'update e ritorna lo staato di successo 204
+		else {
+			articoloservice.update(articolo, utente, articolo_selezionato);
+			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		}
+	}
+			
 }
