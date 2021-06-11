@@ -93,6 +93,8 @@ public class ArticoloApiController {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
 	}
+	
+	//Ricerca articoli
 	@RequestMapping(value = "/api/articolo", method = RequestMethod.GET)
 	public ResponseEntity<?> ricercaArticoli(@RequestHeader(name = "Authorization", required = false) String token) throws Exception {
 		String username = null;
@@ -100,7 +102,44 @@ public class ArticoloApiController {
 			token = token.replaceAll("Bearer ", "");
 			username = jwtUtil.getUsernameFromToken(token);
 		}
-		return null;
+		//Se non c'è nessun utente loggato restituisci solo gli articoli con stato Pubblicato ossia 1 mentre 0 corrisponde alla bozza
+		List <Articolo> articoli_pubblicati=articolodao.trovaArticoliPubblicati(1);	
+		List <Articolo> articoli_bozza;
+		//se l'utente non è loggato ed esistono articoli pubblicati falli vedere al client restituendo lo stato 200
+		if(username==null && articoli_pubblicati!=null) {
+			return ResponseEntity.ok(articoli_pubblicati);
+		}
+		//se invece l'utente è loggato oltre a restituire tutti gli articoli pubblicati può vedere anche i suoi articoli in stato Bozza
+		//se presenti
+		if (username!=null) {
+			//Con questa query vado a selezionare l'utente corrente che ha articoli nello stato Bozza 
+			articoli_bozza=articolodao.trovaArticoliBozzaUtente(username,0);
+			//Praticamente qui faccio un controllo e vedo se sia articoli_bozza che pubblicati sono valorizzati ,se è cosi praticamente
+			//inserisco in una lista i valori dell'altro in questo modo da ritornare un'unica lista al client avente i valori degli articoli
+			//pubblicati + gli articoli bozza dell'utente
+			if(articoli_bozza!=null && articoli_pubblicati!=null) {
+				for (int i=0;i<articoli_bozza.size();i++) {
+					articoli_pubblicati.add(articoli_bozza.get(i));
+				}
+				return ResponseEntity.ok(articoli_pubblicati);
+			}
+			//Se una delle due liste non è valorizzata può significare 2 cose:
+			//1) l'utente corrente non ha articoli bozza quindi restituisco al client solo gli articoli con stato Pubblicato (1)
+			//2)Può essere che non esistono articoli pubblicati ma che l'utente ha scritto degli articoli con Stato Bozza quindi
+			//Praticamente l'utente visualizzerà solo i suoi articoli in quanto non sono presenti articoli pubblicati
+			if(articoli_bozza==null) {
+				return ResponseEntity.ok(articoli_pubblicati);
+			}
+			else {
+				return ResponseEntity.ok(articoli_bozza);
+			}
+		}
+		// se arrivo a questo punto significa che non è loggato nessun utente e non ci sono articoli pubblicati e restituisce l'errore 404
+		else {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND); 
+		}
+		
+		
 	}
 	
 	
