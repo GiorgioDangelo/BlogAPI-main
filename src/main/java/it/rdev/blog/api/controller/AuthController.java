@@ -31,7 +31,7 @@ public class AuthController {
 
 	@Autowired
 	private BlogUserDetailsService userDetailsService;
-
+     //aaa
 	//Metodo post con il path auth ,prende in input un oggetto JwtRequest
 	@RequestMapping(value = "/auth", method = RequestMethod.POST)
 	public ResponseEntity<?> createAuthenticationToken(@RequestBody JwtRequest authenticationRequest) throws Exception {

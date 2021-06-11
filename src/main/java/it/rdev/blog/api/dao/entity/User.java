@@ -2,6 +2,9 @@ package it.rdev.blog.api.dao.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+
+import java.util.Set;
+
 import javax.persistence.*;
 
 @Entity
@@ -9,13 +12,11 @@ import javax.persistence.*;
 public class User {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private long id;
-	@Column
 	private String username;
 	@Column
 	@JsonIgnore
 	private String password;
+
 
 	public String getUsername() {
 		return username;
