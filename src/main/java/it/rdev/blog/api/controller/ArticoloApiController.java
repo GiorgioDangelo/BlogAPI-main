@@ -2,10 +2,9 @@ package it.rdev.blog.api.controller;
 
 import java.util.List;
 
-import javax.servlet.http.HttpServletRequest;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -13,10 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import it.rdev.blog.api.config.JwtRequestFilter;
 import it.rdev.blog.api.config.JwtTokenUtil;
 import it.rdev.blog.api.controller.dto.ArticoloDTO;
-import it.rdev.blog.api.controller.dto.JwtResponse;
 import it.rdev.blog.api.dao.UserDao;
 import it.rdev.blog.api.dao.entity.User;
 import it.rdev.blog.api.service.ArticoloUserDetailsService;
@@ -44,7 +41,7 @@ public class ArticoloApiController {
 		if(nomi_categorie!=null) {
 		return ResponseEntity.ok(nomi_categorie);}
 		else {
-			return (ResponseEntity<?>) ResponseEntity.notFound();
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
 	}
 

@@ -18,14 +18,14 @@ public class TestApiController {
 		return "Risorsa Accesibile";
 	}
 
-//	@PostMapping({ "/api/test" })
-//	public String post(@RequestHeader(name = "Authorization") String token) {
-//		String username = null;
-//		if(token != null && token.startsWith("Bearer")) {
-//			token = token.replaceAll("Bearer ", "");
-//			username = jwtUtil.getUsernameFromToken(token);
-//		}
-//		return "Risorsa Protetta [" + username + "]";
-//	}
+	@PostMapping({ "/api/test" })
+	public String post(@RequestHeader(name = "Authorization") String token) {
+		String username = null;
+		if(token != null && token.startsWith("Bearer")) {
+			token = token.replaceAll("Bearer ", "");
+			username = jwtUtil.getUsernameFromToken(token);
+		}
+		return "Risorsa Protetta [" + username + "]";
+	}
 
 }
