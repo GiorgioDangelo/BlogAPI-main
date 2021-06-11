@@ -11,4 +11,7 @@ public interface ArticoloDao extends CrudRepository<Articolo, Integer>{
 	@Query("Select a from Articolo a JOIN a.struttura_user c WHERE c.username= :valore and a.id= :valore1")
 	Articolo ricercaArticolo(@Param("valore")String ricerca,@Param("valore1")Long id);
 	
+	@Query("Select a from Articolo a WHERE a.id= :valore")
+	Articolo trovaID(@Param("valore")Long id);
+	
 }
