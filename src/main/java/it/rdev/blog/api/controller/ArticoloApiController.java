@@ -1,5 +1,6 @@
 package it.rdev.blog.api.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -171,33 +172,40 @@ public class ArticoloApiController {
 			@RequestHeader(name = "Authorization", required = false) String token)
 			throws Exception {
 		String username = apiController.controlloToken(token);
-		
-		//Ricerca per titolo sottotitolo e categoria
+		List<Articolo>lista_completa=new ArrayList<Articolo>();
+		//Ricerca per titolo sottotitolo o testo dell'articolo
 		List<Articolo> ricercaContenuti;
 		if(titolo!=null && titolo.length()>=3) {
 			ricercaContenuti=articolodao.ricercaContenuti(titolo);
 			if(ricercaContenuti!=null) {
-				return ResponseEntity.ok(ricercaContenuti);
-			}
-			else {
-				return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+				for (int i=0;i<ricercaContenuti.size();i++) {
+					lista_completa.add(ricercaContenuti.get(i));
+				}
 			}
 		}
-		//ricerca per id
+		//Ricerca per id
 		Articolo articolo_specifico=articolodao.trovaID(id);
 		if(articolo_specifico!=null) {
-		return ResponseEntity.ok(articolo_specifico);
+			lista_completa.add(articolo_specifico);
 		}
-		//ricerca per categoria
+		//Ricerca per categoria
 		List<Articolo> lista_categoria=articolodao.ricercaCategoria(categoria);
 		if(lista_categoria!=null) {
-			return ResponseEntity.ok(lista_categoria);
+			for (int i=0;i<lista_categoria.size();i++) {
+				lista_completa.add(lista_categoria.get(i));
+			}
 		}
-		//ricerca autore
-		List<Articolo> lista_autore_categorie=articolodao.ricercaAutore(autore);
-		if(lista_autore_categorie!=null) {
-			return ResponseEntity.ok(lista_autore_categorie);
+		//Ricerca autore
+		List<Articolo> lista_autore=articolodao.ricercaAutore(autore);
+		if(lista_autore!=null) {
+			for (int i=0;i<lista_autore.size();i++) {
+				lista_completa.add(lista_autore.get(i));
+			}
 		}
+		if(lista_completa!=null) {
+			ResponseEntity.ok(lista_completa);
+		}
+		
 		
 
 		// Se non c'è nessun utente loggato restituisci solo gli articoli con stato
