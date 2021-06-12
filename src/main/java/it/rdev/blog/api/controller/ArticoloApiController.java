@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import it.rdev.blog.api.config.JwtTokenUtil;
@@ -149,11 +150,56 @@ public class ArticoloApiController {
 		}
 	}
 
-	// Ricerca articoli
+	/*
+	 * Restituisce una lista di articoli eventualmente paginata in formato JSON.
+	L’endpoint è raggiungibile da tutti gli utenti (registrati ed anonimi). Gli utenti anonimi otterranno in output solo gli 
+	articoli in stato pubblicato mentre gli utenti loggati, oltre agli articoli in stato pubblicato, riceveranno anche i propri articoli 
+	in stato bozza.
+	Il servizio dovrà permettere di filtrare i risultati per testo (dovranno essere passati almeno 3 caratteri) cercando 
+	il testo passato come parametro nel titolo, sottotitolo e testo dell’articolo in OR.
+	Dovrà essere possibile ricercare un articolo anche per id, categoria, tag o autore.
+	Se vengono passati più filtri di ricerca tra i precedenti dovranno essere utilizzati in AND.
+	Status code restituiti:
+	●200: se la ricerca produce risultati
+	●400: se uno dei parametri passati in input non è formalmente corretto 
+	●404: se la ricerca non produce alcun risultato
+
+	 */
 	@RequestMapping(value = "/api/articolo", method = RequestMethod.GET)
-	public ResponseEntity<?> ricercaArticoli(@RequestHeader(name = "Authorization", required = false) String token)
+	public ResponseEntity<?> ricercaArticoli(@RequestParam(name="titolo",required=false) String titolo,@RequestParam(name="id",required=false) Long id,
+			@RequestParam(name="categoria",required=false) String categoria,@RequestParam(name="autore",required=false) String autore,
+			@RequestHeader(name = "Authorization", required = false) String token)
 			throws Exception {
 		String username = apiController.controlloToken(token);
+		
+		//Ricerca per titolo sottotitolo e categoria
+		List<Articolo> ricercaContenuti;
+		if(titolo!=null && titolo.length()>=3) {
+			ricercaContenuti=articolodao.ricercaContenuti(titolo);
+			if(ricercaContenuti!=null) {
+				return ResponseEntity.ok(ricercaContenuti);
+			}
+			else {
+				return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+			}
+		}
+		//ricerca per id
+		Articolo articolo_specifico=articolodao.trovaID(id);
+		if(articolo_specifico!=null) {
+		return ResponseEntity.ok(articolo_specifico);
+		}
+		//ricerca per categoria
+		List<Articolo> lista_categoria=articolodao.ricercaCategoria(categoria);
+		if(lista_categoria!=null) {
+			return ResponseEntity.ok(lista_categoria);
+		}
+		//ricerca autore
+		List<Articolo> lista_autore_categorie=articolodao.ricercaAutore(autore);
+		if(lista_autore_categorie!=null) {
+			return ResponseEntity.ok(lista_autore_categorie);
+		}
+		
+
 		// Se non c'è nessun utente loggato restituisci solo gli articoli con stato
 		// Pubblicato ossia 1 mentre 0 corrisponde alla bozza
 		List<Articolo> articoli_pubblicati = articolodao.trovaArticoliPubblicati(1);
