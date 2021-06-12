@@ -197,15 +197,18 @@ public class ArticoloApiController {
 		}
 		//Ricerca autore
 		List<Articolo> lista_autore=articolodao.ricercaAutore(autore);
+		System.out.println(lista_autore);
 		if(lista_autore!=null) {
 			for (int i=0;i<lista_autore.size();i++) {
 				lista_completa.add(lista_autore.get(i));
 			}
 		}
+		
+		
+		//Ritorna la lista completa se sono stati inseriti dei parametris
 		if(lista_completa!=null) {
 			ResponseEntity.ok(lista_completa);
 		}
-		
 		
 
 		// Se non c'è nessun utente loggato restituisci solo gli articoli con stato

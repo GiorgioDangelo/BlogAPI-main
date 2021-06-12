@@ -7,5 +7,6 @@ import it.rdev.blog.api.dao.entity.Tags;
 import it.rdev.blog.api.dao.entity.User;
 @Repository
 public interface TagsDao extends CrudRepository<Tags, Integer>{
+	
 
 }
