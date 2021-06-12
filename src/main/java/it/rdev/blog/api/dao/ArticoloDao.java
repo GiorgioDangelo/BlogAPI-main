@@ -36,5 +36,7 @@ public interface ArticoloDao extends CrudRepository<Articolo, Integer>{
 	//filtrare i risultati
 	@Query("Select a from Articolo a WHERE a.titolo like :ricerca OR a.sottotitolo like :ricerca OR a.testo like :ricerca")
 	List<Articolo> ricercaContenuti(@Param("ricerca")String ricerca);
-	
+	//Trovate l'articolo con un determinato id e stato pubblicato
+	@Query("Select a from Articolo a WHERE a.id= :valore and a.stato=1")
+	Articolo articoloTramiteIdConStatoPubblicato(@Param("valore")Long id);
 }

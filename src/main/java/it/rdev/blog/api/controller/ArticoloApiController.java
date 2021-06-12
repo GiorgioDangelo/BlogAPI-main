@@ -39,64 +39,112 @@ public class ArticoloApiController {
 
 	@Autowired
 	ArticoloUserDetailsService articoloservice;
-    /*
-     * Restituisce la lista di categorie presenti nel database Status code restituiti:
-     * ●200: se sono state restituite delle categorie
-     * ●404: se non è presente alcuna categoria all’interno del database
-     */
+
+	/*
+	 * Restituisce la lista di categorie presenti nel database Status code
+	 * restituiti: ●200: se sono state restituite delle categorie ●404: se non è
+	 * presente alcuna categoria all’interno del database
+	 */
 	@RequestMapping(value = "/api/categoria", method = RequestMethod.GET)
 	public ResponseEntity<?> getArticoli() throws Exception {
 		List<String> nomi_categorie;
-		//Ho una query che mi restituisce tutte le categorie
+		// Ho una query che mi restituisce tutte le categorie
 		nomi_categorie = articoloservice.getAllCategorie();
-		// Se ci sono elementi nella lista significa che ci sono categorie quindi mostrale al client e stampa il code 200 tutt'ok
+		// Se ci sono elementi nella lista significa che ci sono categorie quindi
+		// mostrale al client e stampa il code 200 tutt'ok
 		if (nomi_categorie != null) {
 			return ResponseEntity.ok(nomi_categorie);
 		} else {
-			//In questo caso significa che non è stata trovate nessuna categoria quindi la lista è vuota e lancia il code 404
+			// In questo caso significa che non è stata trovate nessuna categoria quindi la
+			// lista è vuota e lancia il code 404
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
 	}
 
-	// Inserimento nel database
+	/*
+	 * Il servizio permetterà l’inserimento di un articolo ad un giornalista registrato. Dovrà prendere in input un articolo in formato 
+	 * JSON compilato in ogni sua parte ed indicare all’utente l’avvenuto inserimento senza restituire alcun valore in response.
+	 *  L’articolo inserito è sempre in bozza, il passaggio in stato pubblicato sarà effettuato da un altro servizio.
+	 Status code restituiti:
+	 ●	204: se l’articolo è stato inserito correttamente
+	 ●	400: se uno dei parametri passati in input non è valorizzato o corretto
+	 ●	401: se un utente non loggato prova ad effettuare l’inserimento di un articolo
+
+	 */
 	@RequestMapping(value = "/api/articolo", method = RequestMethod.POST)
 	public ResponseEntity<?> saveArticoloBozza(@RequestBody ArticoloDTO articolo,
 			@RequestHeader(name = "Authorization") String token) throws Exception {
 		String username = apiController.controlloToken(token);
 		User utente = userdao.findByUsername(username);
-		return ResponseEntity.ok(articoloservice.save(articolo, utente));
+		if (articolo.getSottotitolo() == null || articolo.getTesto() == null || articolo.getTitolo() == null
+				|| articolo.getCategoria() == null) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
+		if(utente!=null) {
+			articoloservice.save(articolo, utente);
+			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+		}
+		else {
+			return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+		}
+		
 	}
 
-	/*  CONTROLLAREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
-	 * Restituisce un singolo articolo in formato JSON identificato dall’id passato nella path variable<:id>.
-	 * L’endpoint è raggiungibile da tutti gli utenti (registrati ed anonimi), se l’id è relativo ad un articolo in stato bozza 
-	 * sarà restituito solo all’autore gli altri utenti otterranno uno status code 404.Status code restituiti:
-	 * ●200:se l’id passato come parametro è relativo ad un articolo in stato pubblicato o ad un articolo in stato bozza e l’utente che lo
-	 *  richiedene è l’autore;
-	 * ●404:se l’id passato non corrisponde a nessun articolo o se l’articolo che identifica è in stato bozza ma l’utente 
-	 *  loggato non ne è l’autore oppure è un utente anonimo.
+	/*
+	 * Restituisce un singolo articolo in formato JSON identificato dall’id passato
+	 * nella path variable<:id>. L’endpoint è raggiungibile da tutti gli utenti
+	 * (registrati ed anonimi), se l’id è relativo ad un articolo in stato bozza
+	 * sarà restituito solo all’autore gli altri utenti otterranno uno status code
+	 * 404.Status code restituiti: ●200:se l’id passato come parametro è relativo ad
+	 * un articolo in stato pubblicato o ad un articolo in stato bozza e l’utente
+	 * che lo richiedene è l’autore; ●404:se l’id passato non corrisponde a nessun
+	 * articolo o se l’articolo che identifica è in stato bozza ma l’utente loggato
+	 * non ne è l’autore oppure è un utente anonimo.
 	 */
 	@RequestMapping(value = "/api/articolo/{id_articolo}", method = RequestMethod.GET)
 	public ResponseEntity<?> recupero_di_un_singolo_articolo(@PathVariable Long id_articolo,
 			@RequestHeader(name = "Authorization", required = false) String token) throws Exception {
-		
+
 		String username = apiController.controlloToken(token);
 		Articolo controllo_articolo = articolodao.trovaID(id_articolo);
+		// se non esiste l'articolo lancia direttamente il not_found
+		if (controllo_articolo == null) {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+		// Qui trovo gli articoli con stato Pubblicato ossia con stato 1
+		Articolo articolo_con_stato_pubblicato = articolodao.articoloTramiteIdConStatoPubblicato(id_articolo);
+		// se l'utente non è loggato e esiste l'articolo con quell'id ed è nello stato
+		// pubblicato mostra l'articolo all'utente anonimos
+		if (username == null && articolo_con_stato_pubblicato != null) {
+			return ResponseEntity.ok(articolo_con_stato_pubblicato);
+		}
+		// In questo caso significa che l'articolo effettivamente esiste,ma l'utente non
+		// è loggato ed l'articolo si trova in stato Bozza
+		if (username == null && articolo_con_stato_pubblicato == null) {
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
 
+		//
 		Articolo controllo_articolo_con_utente = articolodao.ricercaArticolo(username, id_articolo);
 		// Lo stato 0 identifica la bozza mentre 1 la pubblicazione dell'articolo
-		// In questo controllo verifico che esiste l'articolo e che lo stato è 0 ossia è
-		// una BOZZA
-		if (controllo_articolo != null && controllo_articolo.getStato() == 0) {
-			return ResponseEntity.ok(controllo_articolo);
+		// In questo controllo verifico che c'è un associazione tra l'autore e
+		// l'articolo e il suo stato è bozza quindi
+		// significa che effettivamente l'utente loggato è il creatore dell'articolo che
+		// si trova nello stato bozza
+		if (controllo_articolo_con_utente != null && controllo_articolo.getStato() == 0) {
+			return ResponseEntity.ok(controllo_articolo_con_utente);
 		}
-		// se l'articolo esiste ed è stato pubblicato e chi lo sta cercando è anche
-		// l'autore allora puoi visualizzarlo
-		if (controllo_articolo != null && controllo_articolo.getStato() == 1 && controllo_articolo_con_utente != null) {
+		// In questo caso significa che non c'è un associazione tra l'utente e
+		// l'articolo ossia che l'utente è loggato ma non è il
+		// proprietario dell'articolo che sta cercando quindi se lo stato dell'articolo
+		// che sta cercando si trova su 1 signfica che può
+		// vederlo perchè è stato pubblicato in caso contrario significa che l'utente è
+		// loggato non è il proprietario dell'articolo
+		// e l'articolo si trova nello stato bozza quindi lancia l'errore 404 not_found
+		if (controllo_articolo_con_utente == null && controllo_articolo.getStato() == 1) {
 			return ResponseEntity.ok(controllo_articolo);
 		} else {
-			// se non è verificata nessuna delle condizioni precendeti lancia il not found
-			// con errore 404
+
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
 	}
@@ -153,15 +201,18 @@ public class ArticoloApiController {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
 	}
-    /*  DA CONTROLLAREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
-     * Il servizio dovrà permettere l’update di un articolo passando in input un articolo informato JSON.
-     * L’aggiornamento dovrà essere consentito solo all’autore dell’articolo.Status code restituiti:
-     * ●204: se l’operazione di update va a buon fine
-     * ●400: se sono presenti parametri non formalmente corretti
-     * ●401: se un utente non loggato prova ad effettuarel’update di un determinato articolo
-     * ●403: se un utente loggato che non è l’autore dell’articoloprova ad effettuarne l’update
-     * ●404: se l’id passato in input non appartiene ad alcunarticolo
-     */
+
+	/*
+	 * Il servizio
+	 * dovrà permettere l’update di un articolo passando in input un articolo
+	 * informato JSON. L’aggiornamento dovrà essere consentito solo all’autore
+	 * dell’articolo.Status code restituiti: ●204: se l’operazione di update va a
+	 * buon fine ●400: se sono presenti parametri non formalmente corretti ●401: se
+	 * un utente non loggato prova ad effettuarel’update di un determinato articolo
+	 * ●403: se un utente loggato che non è l’autore dell’articolo prova ad
+	 * effettuarne l’update ●404: se l’id passato in input non appartiene ad
+	 * alcun articolo
+	 */
 	@RequestMapping(value = "/api/articolo/{id_articolo}", method = RequestMethod.PUT)
 	public ResponseEntity<?> modificaArticoli(@RequestBody ArticoloDTO articolo, @PathVariable Long id_articolo,
 			@RequestHeader(name = "Authorization", required = false) String token) throws Exception {
@@ -176,8 +227,9 @@ public class ArticoloApiController {
 		if (check_articolo == null) {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
-		//Se uno di questi valori non è stato valorizzato nel body lancia l'errore 400 
-		if(articolo.getSottotitolo()==null || articolo.getTesto()==null || articolo.getTitolo()==null || articolo.getCategoria()==null) {
+		// Se uno di questi valori non è stato valorizzato nel body lancia l'errore 400
+		if (articolo.getSottotitolo() == null || articolo.getTesto() == null || articolo.getTitolo() == null
+				|| articolo.getCategoria() == null) {
 			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
 		}
 
@@ -199,15 +251,15 @@ public class ArticoloApiController {
 			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 		}
 	}
-	
-	
+
 	/*
-	 * Il servizio elimina unarticolo presente all’interno del database.L’eliminazione è consentita solo all’autore
-	 *  dell’articolo dopo aver effettuato la login.Status code restituiti:
-	 *  ●204: se l’eliminazione va a buon fine
-	 *  ●401: se un utente non loggato prova ad effettuarel’eliminazione di un articolo
-	 *  ●403: se l’utente loggato non è l’autore dell’articoloche cerca di eliminare
-	 *  ●404: se l’id passato in input non è associato ad alcunarticolo presente nel database
+	 * Il servizio elimina un articolo presente all’interno del
+	 * database.L’eliminazione è consentita solo all’autore dell’articolo dopo aver
+	 * effettuato la login.Status code restituiti: ●204: se l’eliminazione va a buon
+	 * fine ●401: se un utente non loggato prova ad effettuarel’eliminazione di un
+	 * articolo ●403: se l’utente loggato non è l’autore dell’articoloche cerca di
+	 * eliminare ●404: se l’id passato in input non è associato ad alcunarticolo
+	 * presente nel database
 	 */
 	@RequestMapping(value = "/api/articolo/{id_articolo}", method = RequestMethod.DELETE)
 	public ResponseEntity<?> eliminaArticolo(@PathVariable Long id_articolo,
@@ -215,26 +267,28 @@ public class ArticoloApiController {
 		String username = apiController.controlloToken(token);
 		// se l'utente non è loggato invia l'errore 401
 		if (username == null) {
-		return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);}
-		
+			return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+		}
+
 		Articolo check_articolo = articolodao.trovaID(id_articolo);
 		// se l'articolo con questo id non esiste lancia l'errore 404 not found
 		if (check_articolo == null) {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
-		
-		Articolo utente_associato_all_articolo=articolodao.articoloUtente(username, id_articolo);
-		//se è null significa che l'utente non corrisponde all'id quindi non è autorizzato 403
-		if(utente_associato_all_articolo==null) {
+
+		Articolo utente_associato_all_articolo = articolodao.articoloUtente(username, id_articolo);
+		// se è null significa che l'utente non corrisponde all'id quindi non è
+		// autorizzato 403
+		if (utente_associato_all_articolo == null) {
 			return new ResponseEntity<>(HttpStatus.FORBIDDEN);
-			
+
 		}
-		//se invece esiste l'utente associato all'articolo esiste allora elimino l'articolo 204
-		else {	
+		// se invece esiste l'utente associato all'articolo esiste allora elimino
+		// l'articolo 204
+		else {
 			articolodao.delete(utente_associato_all_articolo);
 			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-		}			
-}
-	//400 
-	//return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
+	}
+
 }
