@@ -29,24 +29,31 @@ public class ArticoloApiController {
 
 	@Value("${jwt.header}")
 	private String jwtHeader;
-	@Autowired
-	private JwtTokenUtil jwtUtil;
+
 	@Autowired
 	private UserDao userdao;
 	@Autowired
 	private ArticoloDao articolodao;
+	@Autowired
+	private ApiController apiController;
 
 	@Autowired
 	ArticoloUserDetailsService articoloservice;
-
+    /*
+     * Restituisce la lista di categorie presenti nel database Status code restituiti:
+     * ●200: se sono state restituite delle categorie
+     * ●404: se non è presente alcuna categoria all’interno del database
+     */
 	@RequestMapping(value = "/api/categoria", method = RequestMethod.GET)
 	public ResponseEntity<?> getArticoli() throws Exception {
 		List<String> nomi_categorie;
+		//Ho una query che mi restituisce tutte le categorie
 		nomi_categorie = articoloservice.getAllCategorie();
-		// Qui gestire la risposta
+		// Se ci sono elementi nella lista significa che ci sono categorie quindi mostrale al client e stampa il code 200 tutt'ok
 		if (nomi_categorie != null) {
 			return ResponseEntity.ok(nomi_categorie);
 		} else {
+			//In questo caso significa che non è stata trovate nessuna categoria quindi la lista è vuota e lancia il code 404
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
 	}
@@ -55,26 +62,25 @@ public class ArticoloApiController {
 	@RequestMapping(value = "/api/articolo", method = RequestMethod.POST)
 	public ResponseEntity<?> saveArticoloBozza(@RequestBody ArticoloDTO articolo,
 			@RequestHeader(name = "Authorization") String token) throws Exception {
-		String username = null;
-		if (token != null && token.startsWith("Bearer")) {
-			token = token.replaceAll("Bearer ", "");
-			username = jwtUtil.getUsernameFromToken(token);
-		}
+		String username = apiController.controlloToken(token);
 		User utente = userdao.findByUsername(username);
 		return ResponseEntity.ok(articoloservice.save(articolo, utente));
 	}
 
-	// Ricerca dell'api tramite l'id con il metodo get
+	/*  CONTROLLAREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+	 * Restituisce un singolo articolo in formato JSON identificato dall’id passato nella path variable<:id>.
+	 * L’endpoint è raggiungibile da tutti gli utenti (registrati ed anonimi), se l’id è relativo ad un articolo in stato bozza 
+	 * sarà restituito solo all’autore gli altri utenti otterranno uno status code 404.Status code restituiti:
+	 * ●200:se l’id passato come parametro è relativo ad un articolo in stato pubblicato o ad un articolo in stato bozza e l’utente che lo
+	 *  richiedene è l’autore;
+	 * ●404:se l’id passato non corrisponde a nessun articolo o se l’articolo che identifica è in stato bozza ma l’utente 
+	 *  loggato non ne è l’autore oppure è un utente anonimo.
+	 */
 	@RequestMapping(value = "/api/articolo/{id_articolo}", method = RequestMethod.GET)
 	public ResponseEntity<?> recupero_di_un_singolo_articolo(@PathVariable Long id_articolo,
 			@RequestHeader(name = "Authorization", required = false) String token) throws Exception {
-		String username = null;
-		if (token != null && token.startsWith("Bearer")) {
-			token = token.replaceAll("Bearer ", "");
-			username = jwtUtil.getUsernameFromToken(token);
-		}
-		System.out.println(username);
-
+		
+		String username = apiController.controlloToken(token);
 		Articolo controllo_articolo = articolodao.trovaID(id_articolo);
 
 		Articolo controllo_articolo_con_utente = articolodao.ricercaArticolo(username, id_articolo);
@@ -99,11 +105,7 @@ public class ArticoloApiController {
 	@RequestMapping(value = "/api/articolo", method = RequestMethod.GET)
 	public ResponseEntity<?> ricercaArticoli(@RequestHeader(name = "Authorization", required = false) String token)
 			throws Exception {
-		String username = null;
-		if (token != null && token.startsWith("Bearer")) {
-			token = token.replaceAll("Bearer ", "");
-			username = jwtUtil.getUsernameFromToken(token);
-		}
+		String username = apiController.controlloToken(token);
 		// Se non c'è nessun utente loggato restituisci solo gli articoli con stato
 		// Pubblicato ossia 1 mentre 0 corrisponde alla bozza
 		List<Articolo> articoli_pubblicati = articolodao.trovaArticoliPubblicati(1);
@@ -151,15 +153,19 @@ public class ArticoloApiController {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
 	}
-
+    /*  DA CONTROLLAREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+     * Il servizio dovrà permettere l’update di un articolo passando in input un articolo informato JSON.
+     * L’aggiornamento dovrà essere consentito solo all’autore dell’articolo.Status code restituiti:
+     * ●204: se l’operazione di update va a buon fine
+     * ●400: se sono presenti parametri non formalmente corretti
+     * ●401: se un utente non loggato prova ad effettuarel’update di un determinato articolo
+     * ●403: se un utente loggato che non è l’autore dell’articoloprova ad effettuarne l’update
+     * ●404: se l’id passato in input non appartiene ad alcunarticolo
+     */
 	@RequestMapping(value = "/api/articolo/{id_articolo}", method = RequestMethod.PUT)
 	public ResponseEntity<?> modificaArticoli(@RequestBody ArticoloDTO articolo, @PathVariable Long id_articolo,
 			@RequestHeader(name = "Authorization", required = false) String token) throws Exception {
-		String username = null;
-		if (token != null && token.startsWith("Bearer")) {
-			token = token.replaceAll("Bearer ", "");
-			username = jwtUtil.getUsernameFromToken(token);
-		}
+		String username = apiController.controlloToken(token);
 		// se l'utente non è loggato invia l'errore 401
 		if (username == null) {
 			return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
@@ -169,6 +175,10 @@ public class ArticoloApiController {
 		// se l'articolo con questo id non esiste lancia l'errore 404 not found
 		if (check_articolo == null) {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+		//Se uno di questi valori non è stato valorizzato nel body lancia l'errore 400 
+		if(articolo.getSottotitolo()==null || articolo.getTesto()==null || articolo.getTitolo()==null || articolo.getCategoria()==null) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
 		}
 
 		// Controllo all'inzio se l'utente è loggato ,poi vedo se l'id passato nell'api
@@ -190,14 +200,19 @@ public class ArticoloApiController {
 		}
 	}
 	
+	
+	/*
+	 * Il servizio elimina unarticolo presente all’interno del database.L’eliminazione è consentita solo all’autore
+	 *  dell’articolo dopo aver effettuato la login.Status code restituiti:
+	 *  ●204: se l’eliminazione va a buon fine
+	 *  ●401: se un utente non loggato prova ad effettuarel’eliminazione di un articolo
+	 *  ●403: se l’utente loggato non è l’autore dell’articoloche cerca di eliminare
+	 *  ●404: se l’id passato in input non è associato ad alcunarticolo presente nel database
+	 */
 	@RequestMapping(value = "/api/articolo/{id_articolo}", method = RequestMethod.DELETE)
-	public ResponseEntity<?> eliminaArticolo(@RequestBody ArticoloDTO articolo, @PathVariable Long id_articolo,
+	public ResponseEntity<?> eliminaArticolo(@PathVariable Long id_articolo,
 			@RequestHeader(name = "Authorization", required = false) String token) throws Exception {
-		String username = null;
-		if (token != null && token.startsWith("Bearer")) {
-			token = token.replaceAll("Bearer ", "");
-			username = jwtUtil.getUsernameFromToken(token);
-		}
+		String username = apiController.controlloToken(token);
 		// se l'utente non è loggato invia l'errore 401
 		if (username == null) {
 		return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);}
@@ -220,4 +235,6 @@ public class ArticoloApiController {
 			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 		}			
 }
+	//400 
+	//return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
 }
