@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import it.rdev.blog.api.config.JwtTokenUtil;
 import it.rdev.blog.api.controller.dto.ArticoloDTO;
 import it.rdev.blog.api.dao.ArticoloDao;
+import it.rdev.blog.api.dao.TagsDao;
 import it.rdev.blog.api.dao.UserDao;
 import it.rdev.blog.api.dao.entity.Articolo;
 import it.rdev.blog.api.dao.entity.User;
@@ -36,6 +37,8 @@ public class ArticoloApiController {
 	private UserDao userdao;
 	@Autowired
 	private ArticoloDao articolodao;
+	@Autowired
+	private TagsDao tagsdao;
 	@Autowired
 	private ApiController apiController;
 
@@ -169,10 +172,12 @@ public class ArticoloApiController {
 	@RequestMapping(value = "/api/articolo", method = RequestMethod.GET)
 	public ResponseEntity<?> ricercaArticoli(@RequestParam(name="titolo",required=false) String titolo,@RequestParam(name="id",required=false) Long id,
 			@RequestParam(name="categoria",required=false) String categoria,@RequestParam(name="autore",required=false) String autore,
-			@RequestHeader(name = "Authorization", required = false) String token)
+			@RequestParam(name="tag",required=false) String tag,@RequestHeader(name = "Authorization", required = false) String token)
 			throws Exception {
+		//Controllo sui paramentri passati in input
+		              
 		if(titolo!=null && titolo instanceof String==false && titolo.length()<3|| categoria!=null && categoria instanceof String==false || 
-				autore!=null && autore instanceof String==false) {
+				autore!=null && autore instanceof String==false || tag!=null && tag instanceof String==false) {
 			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
 		}
 		String username = apiController.controlloToken(token);
@@ -202,12 +207,21 @@ public class ArticoloApiController {
 		}
 		//Ricerca autore
 		List<Articolo> lista_autore=articolodao.ricercaAutore(autore);
-		System.out.println(lista_autore);
 		if(lista_autore!=null) {
 			for (int i=0;i<lista_autore.size();i++) {
 				lista_completa.add(lista_autore.get(i));
 			}
 		}
+		//Ricerca tag
+		List<Articolo> lista_tag=tagsdao.trovaTag(tag);   
+		if(lista_tag!=null) {
+			for (int i=0;i<lista_tag.size();i++) {
+				lista_completa.add(lista_tag.get(i));
+			}
+		}
+		
+		
+		
 		
 		System.out.println(lista_completa.size());
 		//Ritorna la lista completa se sono stati inseriti dei parametris
