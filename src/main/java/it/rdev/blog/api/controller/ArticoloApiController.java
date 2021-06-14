@@ -79,12 +79,16 @@ public class ArticoloApiController {
 	@RequestMapping(value = "/api/articolo", method = RequestMethod.POST)
 	public ResponseEntity<?> saveArticoloBozza(@RequestBody ArticoloDTO articolo,
 			@RequestHeader(name = "Authorization") String token) throws Exception {
-		String username = apiController.controlloToken(token);
-		User utente = userdao.findByUsername(username);
-		if (articolo.getSottotitolo() == null || articolo.getTesto() == null || articolo.getTitolo() == null
-				|| articolo.getCategoria() == null) {
+		if (articolo.getSottotitolo() == null && articolo.getSottotitolo() instanceof String==false || articolo.getSottotitolo().length()==0 || 
+				articolo.getTesto() == null && articolo.getTesto() instanceof String==false || articolo.getTesto().length()==0|| 
+				articolo.getTitolo() == null && articolo.getTitolo() instanceof String==false || articolo.getTitolo().length()==0
+				|| articolo.getCategoria() == null && articolo.getCategoria() instanceof String==false || articolo.getCategoria().length()==0) {
 			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
 		}
+		String username = apiController.controlloToken(token);
+		User utente = userdao.findByUsername(username);
+		//Controllo l'inserimento dei parametri 
+		
 		if(utente!=null) {
 			articoloservice.save(articolo, utente);
 			return new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -293,6 +297,12 @@ public class ArticoloApiController {
 	@RequestMapping(value = "/api/articolo/{id_articolo}", method = RequestMethod.PUT)
 	public ResponseEntity<?> modificaArticoli(@RequestBody ArticoloDTO articolo, @PathVariable Long id_articolo,
 			@RequestHeader(name = "Authorization", required = false) String token) throws Exception {
+		if (articolo.getSottotitolo() == null && articolo.getSottotitolo() instanceof String==false || articolo.getSottotitolo().length()==0 || 
+				articolo.getTesto() == null && articolo.getTesto() instanceof String==false || articolo.getTesto().length()==0|| 
+				articolo.getTitolo() == null && articolo.getTitolo() instanceof String==false || articolo.getTitolo().length()==0
+				|| articolo.getCategoria() == null && articolo.getCategoria() instanceof String==false || articolo.getCategoria().length()==0) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
 		String username = apiController.controlloToken(token);
 		// se l'utente non è loggato invia l'errore 401
 		if (username == null) {
@@ -304,11 +314,7 @@ public class ArticoloApiController {
 		if (check_articolo == null) {
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
-		// Se uno di questi valori non è stato valorizzato nel body lancia l'errore 400
-		if (articolo.getSottotitolo() == null || articolo.getTesto() == null || articolo.getTitolo() == null
-				|| articolo.getCategoria() == null) {
-			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-		}
+
 
 		// Controllo all'inzio se l'utente è loggato ,poi vedo se l'id passato nell'api
 		// corrisponde ad un suo articolo che si trova
