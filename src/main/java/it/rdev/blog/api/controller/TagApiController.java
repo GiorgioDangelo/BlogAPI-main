@@ -33,13 +33,13 @@ public class TagApiController {
 	//Praticamente controllo l'utente se esiste e se a lui è associato ad un articolo 
 	//in maniera tale che si possono aggiungere determinati tag a quell'articolo
 	
-	
+	//E' stata implementa l'api per aggiungere un tag ad uno specificato articolo
 	@RequestMapping(value = "/api/tag/{id_articolo}", method = RequestMethod.POST)
 	public ResponseEntity<?> saveArticoloBozza(@PathVariable  Long id_articolo,@RequestBody TagsDTO tag_dto,
 			@RequestHeader(name = "Authorization") String token) throws Exception {
 		String username = apiController.controlloToken(token);
-		//Quindi vado l'utente inserisce il tag in base al suo nome e all'id del suo articolo
-		//facendo i dovuti controlli
+		//Controllo che l'utente che vuole inserire il tag sia il creatore dell'articolo se è cosi inserisci
+		//sennò lancia un not_found
 		Articolo ok=articolodao.ricercaArticolo(username,id_articolo);
 		if(ok!=null) {
 			return ResponseEntity.ok(service_tag.save(tag_dto, ok));

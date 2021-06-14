@@ -171,11 +171,16 @@ public class ArticoloApiController {
 			@RequestParam(name="categoria",required=false) String categoria,@RequestParam(name="autore",required=false) String autore,
 			@RequestHeader(name = "Authorization", required = false) String token)
 			throws Exception {
+		if(titolo!=null && titolo instanceof String==false && titolo.length()<3|| categoria!=null && categoria instanceof String==false || 
+				autore!=null && autore instanceof String==false) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
 		String username = apiController.controlloToken(token);
 		List<Articolo>lista_completa=new ArrayList<Articolo>();
 		//Ricerca per titolo sottotitolo o testo dell'articolo
 		List<Articolo> ricercaContenuti;
-		if(titolo!=null && titolo.length()>=3) {
+		
+		if(titolo!=null) {
 			ricercaContenuti=articolodao.ricercaContenuti(titolo);
 			if(ricercaContenuti!=null) {
 				for (int i=0;i<ricercaContenuti.size();i++) {
@@ -215,6 +220,7 @@ public class ArticoloApiController {
 		// Pubblicato ossia 1 mentre 0 corrisponde alla bozza
 		List<Articolo> articoli_pubblicati = articolodao.trovaArticoliPubblicati(1);
 		List<Articolo> articoli_bozza;
+		
 
 		// se l'utente non è loggato ed esistono articoli pubblicati falli vedere al
 		// client restituendo lo stato 200
