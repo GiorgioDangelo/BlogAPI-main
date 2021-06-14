@@ -209,10 +209,10 @@ public class ArticoloApiController {
 			}
 		}
 		
-		
+		System.out.println(lista_completa.size());
 		//Ritorna la lista completa se sono stati inseriti dei parametris
 		if(lista_completa!=null) {
-			ResponseEntity.ok(lista_completa);
+			return ResponseEntity.ok(lista_completa);
 		}
 		
 
